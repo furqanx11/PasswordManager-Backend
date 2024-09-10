@@ -1,0 +1,7 @@
+fastapi
+tortoise-orm
+asyncpg
+passlib[bcrypt]
+python-dotenv
+cryptography
+uvicorn

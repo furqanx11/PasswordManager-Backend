@@ -12,32 +12,52 @@ class BaseModel(Model):
         abstract = True
 
 
-class User(BaseModel):
+class Users(BaseModel):
+    name = fields.CharField(max_length=50)
     username = fields.CharField(max_length=50, unique=True)
     password = fields.CharField(max_length=128)
     email = fields.CharField(max_length=100, unique=True)
-    is_active = fields.BooleanField(default=True)
-    is_admin = fields.BooleanField(default=False)
+    role = fields.ForeignKeyField('models.Roles', related_name='users')
 
 
-class Project(BaseModel):
+class Roles(BaseModel):
+    name = fields.CharField(max_length=20, unique=True)
+
+
+class Projects(BaseModel):
     name = fields.CharField(max_length=100, unique=True)
     description = fields.TextField(null=True)
+    saved_at = fields.DatetimeField(auto_now_add=True)
 
 
 class UserProject(BaseModel):
-    user = fields.ForeignKeyField('models.User', related_name='projects')
-    project = fields.ForeignKeyField('models.Project', related_name='users')
+    user = fields.ForeignKeyField('models.Users', related_name='user_projects')
+    project = fields.ForeignKeyField('models.Projects', related_name='project_users')
 
 
-class Password(BaseModel):
-    project = fields.ForeignKeyField('models.Project', related_name='passwords')
-    password = fields.CharField(max_length=256)
-    service = fields.CharField(max_length=100)
+class Permissions(BaseModel):
+    mode = fields.ForeignKeyField('models.Modes', related_name='permissions')
+    name = fields.CharField(max_length=20, unique=True)
 
 
+class RolePermissions(BaseModel):
+    role = fields.ForeignKeyField('models.Roles', related_name='role_permissions')
+    permission = fields.ForeignKeyField('models.Permissions', related_name='permission_roles')
 
-User_Pydantic = pydantic_model_creator(User, name="User")
-Project_Pydantic = pydantic_model_creator(Project, name="Project")
+
+class Fields(BaseModel):
+    project = fields.ForeignKeyField('models.Projects', related_name='fields')
+    mode = fields.ForeignKeyField('models.Modes', related_name='fields')
+    key = fields.CharField(max_length=50)
+    value = fields.CharField(max_length=255)
+    description = fields.CharField(max_length=255, null=True)
+
+
+class Modes(BaseModel):
+    name = fields.CharField(max_length=20, unique=True)
+
+
+User_Pydantic = pydantic_model_creator(Users, name="User")
+Project_Pydantic = pydantic_model_creator(Projects, name="Project")
 UserProject_Pydantic = pydantic_model_creator(UserProject, name="UserProject")
-Password_Pydantic = pydantic_model_creator(Password, name="Password")
+Field_Pydantic = pydantic_model_creator(Fields, name="Field")

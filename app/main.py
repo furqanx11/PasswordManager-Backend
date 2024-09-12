@@ -17,3 +17,7 @@ register_tortoise(
     generate_schemas=True,
     add_exception_handlers=True
 )
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to your Password Manager"}

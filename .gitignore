@@ -1,7 +1,10 @@
 **/__pycache__/
+*.pyc
 app/check.py
 app/config.py
 data
 migrations
 docker-compose.yml
 .env
+venv/
+*.pem

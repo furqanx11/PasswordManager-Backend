@@ -8,20 +8,17 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
-    role_id: int
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    role_id: Optional[int] = None
-
+    
 class UserRead(BaseSchema):
     name : str
     username: str
     email: EmailStr
-    #role_id: int
 
     class Config:
         orm_mode = True

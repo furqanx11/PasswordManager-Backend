@@ -9,8 +9,7 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-class User(BaseModel):
-    role = fields.ForeignKeyField('models.Role', related_name='users')
+class Users(BaseModel):
     name = fields.CharField(max_length=50)
     username = fields.CharField(max_length=20, unique=True)
     password = fields.CharField(max_length=255) 
@@ -19,51 +18,54 @@ class User(BaseModel):
     class PydanticMeta:
         exclude = ['password'] 
 
-
-class Role(BaseModel):
+class Roles(BaseModel):
     name = fields.CharField(max_length=20)
 
-class Permission(BaseModel):
+class UserRoles(BaseModel):
+    user = fields.ForeignKeyField('models.Users', related_name='roles')
+    role = fields.ForeignKeyField('models.Roles', related_name='users')
+
+class Permissions(BaseModel):
     name = fields.CharField(max_length=20)
     allowed_api = fields.CharField(max_length=50)
 
-class Project(BaseModel):
+class Projects(BaseModel):
     name = fields.CharField(max_length=100)
     description = fields.CharField(max_length=255, null=True)
 
-class UserProject(BaseModel):
-    user = fields.ForeignKeyField('models.User', related_name='projects')
-    project = fields.ForeignKeyField('models.Project', related_name='users')
+class UserProjects(BaseModel):
+    user = fields.ForeignKeyField('models.Users', related_name='projects')
+    project = fields.ForeignKeyField('models.Projects', related_name='users')
 
-
-class Field(BaseModel):
-    project = fields.ForeignKeyField('models.Project', related_name='fields')
-    mode = fields.ForeignKeyField('models.Mode', related_name='fields')
+class Fields(BaseModel):
+    project = fields.ForeignKeyField('models.Projects', related_name='fields')
+    mode = fields.ForeignKeyField('models.Modes', related_name='fields')
     key = fields.CharField(max_length=50)
     value = fields.CharField(max_length=255)  
     description = fields.CharField(max_length=255, null=True)
 
-
-class Mode(BaseModel):
+class Modes(BaseModel):
     name = fields.CharField(max_length=20)
 
-class RolePermission(BaseModel):
-    role = fields.ForeignKeyField('models.Role', related_name='role_permissions')
-    permission = fields.ForeignKeyField('models.Permission', related_name='role_permissions')
+class RolePermissions(BaseModel):
+    role = fields.ForeignKeyField('models.Roles', related_name='role_permissions')
+    permission = fields.ForeignKeyField('models.Permissions', related_name='role_permissions')
 
-Mode_Pydantic = pydantic_model_creator(Mode, name="Mode")
-ModeIn_Pydantic = pydantic_model_creator(Mode, name="ModeIn", exclude_readonly=True)
-Field_Pydantic = pydantic_model_creator(Field, name="Field")
-FieldIn_Pydantic = pydantic_model_creator(Field, name="FieldIn", exclude_readonly=True)
-UserProject_Pydantic = pydantic_model_creator(UserProject, name="UserProject")
-UserProjectIn_Pydantic = pydantic_model_creator(UserProject, name="UserProjectIn", exclude_readonly=True)
-Project_Pydantic = pydantic_model_creator(Project, name="Project")
-ProjectIn_Pydantic = pydantic_model_creator(Project, name="ProjectIn", exclude_readonly=True)
-Permission_Pydantic = pydantic_model_creator(Permission, name="Permission")
-PermissionIn_Pydantic = pydantic_model_creator(Permission, name="PermissionIn", exclude_readonly=True)
-Role_Pydantic = pydantic_model_creator(Role, name="Role")
-RoleIn_Pydantic = pydantic_model_creator(Role, name="RoleIn", exclude_readonly=True)
-User_Pydantic = pydantic_model_creator(User, name="User")
-UserIn_Pydantic = pydantic_model_creator(User, name="UserIn", exclude_readonly=True)
-RolePermission_Pydantic = pydantic_model_creator(RolePermission, name="RolePermission")
-RolePermissionIn_Pydantic = pydantic_model_creator(RolePermission, name="RolePermissionIn", exclude_readonly=True)
+Mode_Pydantic = pydantic_model_creator(Modes, name="Mode")
+ModeIn_Pydantic = pydantic_model_creator(Modes, name="ModeIn", exclude_readonly=True)
+Field_Pydantic = pydantic_model_creator(Fields, name="Field")
+FieldIn_Pydantic = pydantic_model_creator(Fields, name="FieldIn", exclude_readonly=True)
+UserProject_Pydantic = pydantic_model_creator(UserProjects, name="UserProject")
+UserProjectIn_Pydantic = pydantic_model_creator(UserProjects, name="UserProjectIn", exclude_readonly=True)
+Project_Pydantic = pydantic_model_creator(Projects, name="Project")
+ProjectIn_Pydantic = pydantic_model_creator(Projects, name="ProjectIn", exclude_readonly=True)
+Permission_Pydantic = pydantic_model_creator(Permissions, name="Permission")
+PermissionIn_Pydantic = pydantic_model_creator(Permissions, name="PermissionIn", exclude_readonly=True)
+Role_Pydantic = pydantic_model_creator(Roles, name="Role")
+RoleIn_Pydantic = pydantic_model_creator(Roles, name="RoleIn", exclude_readonly=True)
+User_Pydantic = pydantic_model_creator(Users, name="User")
+UserIn_Pydantic = pydantic_model_creator(Users, name="UserIn", exclude_readonly=True)
+RolePermission_Pydantic = pydantic_model_creator(RolePermissions, name="RolePermission")
+RolePermissionIn_Pydantic = pydantic_model_creator(RolePermissions, name="RolePermissionIn", exclude_readonly=True)
+UserRole_Pydantic = pydantic_model_creator(UserRoles, name="UserRole")
+UserRoleIn_Pydantic = pydantic_model_creator(UserRoles, name="UserRoleIn", exclude_readonly=True)

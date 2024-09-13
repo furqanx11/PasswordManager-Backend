@@ -1,9 +1,9 @@
 from app.crud.crud import CRUD
 from app.schemas.field_schema import FieldCreate, FieldRead, FieldUpdate
 from app.routers.routes import routes
-from app.models import Field, Field_Pydantic
+from app.models import Fields, Field_Pydantic
 
-field = CRUD(Field, Field_Pydantic)
+field = CRUD(Fields, Field_Pydantic)
 
 router = routes(
     create_func=field.create,

@@ -1,10 +1,10 @@
 from app.crud.crud import CRUD
 from app.schemas.role_schema import RoleCreate, RoleRead, RoleUpdate
 from app.routers.routes import routes
-from app.models import Role, Role_Pydantic
+from app.models import Roles, Role_Pydantic
 
 
-role = CRUD(Role, Role_Pydantic)
+role = CRUD(Roles, Role_Pydantic)
 
 router = routes(
     create_func=role.create,

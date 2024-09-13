@@ -1,9 +1,9 @@
 from app.crud.crud import CRUD
 from app.schemas.mode_schema import ModeCreate, ModeRead, ModeUpdate
 from app.routers.routes import routes
-from app.models import Mode, Mode_Pydantic
+from app.models import Modes, Mode_Pydantic
 
-mode = CRUD(Mode, Mode_Pydantic)
+mode = CRUD(Modes, Mode_Pydantic)
 
 router = routes(
     create_func=mode.create,

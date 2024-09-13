@@ -1,9 +1,9 @@
 from app.crud.crud import CRUD
 from app.schemas.role_permission_schema import RolePermissionCreate, RolePermissionRead, RolePermissionUpdate
 from app.routers.routes import routes
-from app.models import RolePermission, RolePermission_Pydantic
+from app.models import RolePermissions, RolePermission_Pydantic
 
-role_permission = CRUD(RolePermission, RolePermission_Pydantic)
+role_permission = CRUD(RolePermissions, RolePermission_Pydantic)
 
 router = routes(
     create_func=role_permission.create,

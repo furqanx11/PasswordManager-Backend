@@ -1,10 +1,9 @@
 from app.crud.crud import CRUD
 from app.schemas.project_schema import ProjectCreate, ProjectRead,ProjectUpdate
 from app.routers.routes import routes
-from app.models import Project, Project_Pydantic
-from app.dependencies.auth import is_admin
+from app.models import Projects, Project_Pydantic
 
-project = CRUD(Project, Project_Pydantic)
+project = CRUD(Projects, Project_Pydantic)
 
 router = routes(
     create_func=project.create,

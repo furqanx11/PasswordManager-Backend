@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, TypeVar
 from tortoise.models import Model
 from app.exceptions.custom_exceptions import CustomValidationException
+#from app.models import User, User_Pydantic, Project, Project_Pydantic, UserProject, Password_Pydantic, Password
 
 
 TModel = TypeVar("TModel", bound=Model)
@@ -9,7 +10,7 @@ class CRUD:
     def __init__(self, model: TModel, model_pydantic):
         self.model = model
         self.model_pydantic = model_pydantic
-
+    
     async def create(self, item_data: Dict[str, Any]) -> TModel:
         try:
             item = await self.model.create(**item_data)
@@ -24,7 +25,7 @@ class CRUD:
         
         return item[0]
     
-    async def update_partial(self, id: int, item_data: Dict[str, Any]) -> Optional[TModel]:
+    async def update(self, id: int, item_data: Dict[str, Any]) -> Optional[TModel]:
         update_data = {k: v for k, v in item_data.items() if v is not None}
         if not update_data:
             raise CustomValidationException(status_code=400, detail="No valid fields provided for update.")
@@ -37,7 +38,5 @@ class CRUD:
         return item
 
     async def delete(self, id: int) -> None:
-        await self.model.filter(id=id).delete()
-    
-        
+        await self.model.filter(id=id).delete()        
         return True

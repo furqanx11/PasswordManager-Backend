@@ -1,24 +1,27 @@
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, List
+from pydantic import EmailStr, BaseModel
 from app.schemas.schema import BaseSchema
+from app.schemas.role_schema import RoleRead
 
-class UserCreateSchema(BaseModel):
+class UserCreate(BaseModel):
+    name : str
     username: str
+    email: EmailStr
     password: str
-    email : str
-    is_admin : Optional[bool] = False           
-    is_active : Optional[bool] = True
+    role_id: int
 
-
-class UserReadSchema(BaseSchema):
-    username: str
-    email: str
-    is_admin: bool
-    is_active: bool
-
-class UserUpdateSchema(BaseModel):
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
     username: Optional[str] = None
+    email: Optional[EmailStr] = None
     password: Optional[str] = None
-    email : Optional[str] = None
-    is_admin : Optional[bool] = None
-    is_active : Optional[bool] = None
+    role_id: Optional[int] = None
+
+class UserRead(BaseSchema):
+    name : str
+    username: str
+    email: EmailStr
+    #role_id: int
+
+    class Config:
+        orm_mode = True

@@ -1,7 +1,6 @@
 **/__pycache__/
-app/check.py
-app/config.py
 data
 migrations
 docker-compose.yml
 .env
+.gitignore

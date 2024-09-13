@@ -15,14 +15,14 @@ def routes(
     create_schema: Type[TCreateSchema],
     response_schema: Type[TResponseSchema],
     update_schema: Type[TUpdateSchema],
-    is_admin : Callable = None
+    pydantic_model: Type = None
 ) -> APIRouter:
     router = APIRouter() 
 
-    if is_admin:
 
-        @router.post("/", response_model=response_schema, status_code=status.HTTP_201_CREATED)
-        async def create(item: create_schema):
+
+    @router.post("/", response_model=pydantic_model, status_code=status.HTTP_201_CREATED)
+    async def create(item: create_schema):
             try:
                 item = await create_func(item.dict())
                 if not item:
@@ -31,15 +31,15 @@ def routes(
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))
 
-        @router.get("/{id}", response_model=response_schema, dependencies=[Depends(is_admin)])
-        async def read(id: str):
+    @router.get("/{id}", response_model=pydantic_model)
+    async def read(id: str):
             item = await get_func(id)
             if not item:
                 raise HTTPException(status_code=404, detail="Item not found")
             return item
 
-        @router.patch("/{id}", response_model=response_schema)
-        async def update_item(id: str, item: update_schema):
+    @router.patch("/{id}", response_model=pydantic_model)
+    async def update_item(id: str, item: update_schema):
             try:
                 item_data = item.dict(exclude_unset=True)
                 updated_item = await update_func(id, item_data)
@@ -49,14 +49,13 @@ def routes(
             except ValidationError as e:
                 raise HTTPException(status_code=422, detail=str(e))
             
-        @router.delete("/{id}", response_model=None)
-        async def delete(id: str):
+    @router.delete("/{id}", response_model=dict)
+    async def delete(id: str):
             item_to_delete = await get_func(id)
             if not item_to_delete:
                 raise HTTPException(status_code=404, detail="Item not found")
             await delete_func(id)
             return {"detail": "Item deleted successfully"}
 
-        return router
+    return router
 
-    return "You do not have the necessary permissions"

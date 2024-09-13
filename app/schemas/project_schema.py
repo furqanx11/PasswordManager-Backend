@@ -1,16 +1,18 @@
 from pydantic import BaseModel
 from app.schemas.schema import BaseSchema
-from typing import Optional
+from typing import Optional, List
 
-class ProjectCreateSchema(BaseModel):
-    name: str
+
+class ProjectCreate(BaseModel):
+    name : str
     description: Optional[str] = None
 
-class ProjectUpdateSchema(BaseModel):
+class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
 
-
-class ProjectReadSchema(BaseSchema):
-    name: str
+class ProjectRead(BaseSchema):
+    name : str
     description: Optional[str] = None
+    class Config:
+        orm_mode = True

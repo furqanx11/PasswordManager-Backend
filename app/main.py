@@ -12,3 +12,17 @@ app.include_router(router)
 @app.on_event("startup")
 async def startup_event():
     await init()
+
+@app.get("/get_all", tags=["OpenAPI"])
+async def get_openapi_schema():
+    openapi_schema = app.openapi()
+    filtered_paths = {
+        path: {
+            method: {
+                "summary": details.get("summary", "")
+            }
+            for method, details in methods.items()
+        }
+        for path, methods in openapi_schema["paths"].items()
+    }
+    return {"paths": filtered_paths}

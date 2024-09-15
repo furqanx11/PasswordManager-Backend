@@ -1,5 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, FastAPI
+from fastapi.openapi.utils import get_openapi
 from app.routers import projects, assign_project, user, roles, permissions, modes, fields, assign_permission, assign_role
+
+app = FastAPI()
 
 router = APIRouter()
 

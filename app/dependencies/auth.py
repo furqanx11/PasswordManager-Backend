@@ -7,13 +7,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_access_token(token)
-    username: str = payload.get("sub")
+    username: str = payload.get("username")
+    roles: list = payload.get("roles", [])
     if username is None:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = await Users.get(username=username)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
-    return user
+    return {"username": user.username, "roles": roles}
 
 async def is_admin(current_user: Users = Depends(get_current_user)):
     if current_user.is_admin == False:

@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Type, TypeVar, Callable
 from pydantic import BaseModel, ValidationError
 from app.exceptions.custom_exceptions import CustomValidationException
+from app.dependencies.auth import get_current_user
+from app.middleware.permissions import has_permission
 
 TCreateSchema = TypeVar("TCreateSchema", bound=BaseModel)
 TResponseSchema = TypeVar("TResponseSchema", bound=BaseModel)
@@ -20,9 +22,13 @@ def routes(
     router = APIRouter() 
 
 
-
     @router.post("/", response_model=pydantic_model, status_code=status.HTTP_201_CREATED)
-    async def create(item: create_schema):
+    async def create(item: create_schema, current_user: dict = Depends(get_current_user)):
+            if not await has_permission(current_user, "create"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You do not have permission to create"
+                )
             try:
                 item = await create_func(item.dict())
                 if not item:

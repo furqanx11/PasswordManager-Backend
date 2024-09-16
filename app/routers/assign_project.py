@@ -11,7 +11,9 @@ router = routes(
     get_func=project.get,
     update_func=project.update,
     delete_func=project.delete,
+    get_all = project.get_all,
     create_schema=UserProjectCreate,
     response_schema=UserProjectRead,
-    update_schema=UserProjectUpdate
+    update_schema=UserProjectUpdate,
+    pydantic_model=UserProject_Pydantic
 )

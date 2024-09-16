@@ -11,6 +11,12 @@ class CRUD:
         self.model = model
         self.model_pydantic = model_pydantic
     
+
+    async def get_all(self) -> List[Any]:
+        data = self.model.all()
+        return await self.model_pydantic.from_queryset(data)
+
+
     async def create(self, item_data: Dict[str, Any]) -> TModel:
         try:
             item = await self.model.create(**item_data)
@@ -22,6 +28,13 @@ class CRUD:
         item = await self.model.filter(id=id).values()
         if not item:
             raise CustomValidationException(status_code=404, detail=f"{self.model.__name__} with id {id} does not exist.")
+        
+        return item[0]
+    
+    async def get_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        item = await self.model.filter(username=username).values()
+        if not item:
+            raise CustomValidationException(status_code=404, detail=f"{self.model.__name__} with username {username} does not exist.")
         
         return item[0]
     

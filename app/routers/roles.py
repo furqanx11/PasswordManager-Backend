@@ -11,7 +11,9 @@ router = routes(
     get_func=role.get,
     update_func=role.update,
     delete_func=role.delete,
+    get_all = role.get_all,
     create_schema=RoleCreate,
     response_schema=RoleRead,
-    update_schema=RoleUpdate
+    update_schema=RoleUpdate,
+    pydantic_model=Role_Pydantic
 )

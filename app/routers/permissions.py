@@ -10,7 +10,9 @@ router = routes(
     get_func=permission.get,
     update_func=permission.update,
     delete_func=permission.delete,
+    get_all = permission.get_all,
     create_schema=PermissionCreate,
     response_schema=PermissionRead,
-    update_schema=PermissionUpdate
+    update_schema=PermissionUpdate,
+    pydantic_model=Permission_Pydantic
 )

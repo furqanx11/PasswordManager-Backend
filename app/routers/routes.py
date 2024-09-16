@@ -4,6 +4,7 @@ from pydantic import BaseModel, ValidationError
 from app.exceptions.custom_exceptions import CustomValidationException
 from app.dependencies.auth import get_current_user
 from app.middleware.permissions import has_permission
+from typing import List, Any
 
 TCreateSchema = TypeVar("TCreateSchema", bound=BaseModel)
 TResponseSchema = TypeVar("TResponseSchema", bound=BaseModel)
@@ -12,6 +13,7 @@ TUpdateSchema = TypeVar("TUpdateSchema", bound=BaseModel)
 def routes(
     create_func: Callable[[dict], TResponseSchema],
     get_func: Callable[[str], TResponseSchema],
+    get_all : Callable[[], list[Any]],
     update_func: Callable[[str, dict], TResponseSchema],
     delete_func: Callable[[str], None],
     create_schema: Type[TCreateSchema],
@@ -36,6 +38,11 @@ def routes(
                 return item
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))
+            
+    @router.get("/", response_model=List[pydantic_model])
+    async def read_all():
+            items = await get_all()
+            return items
 
     @router.get("/{id}", response_model=pydantic_model)
     async def read(id: str):

@@ -4,6 +4,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
+import base64
 
 def generate_rsa_keys():
     private_key = rsa.generate_private_key(
@@ -26,9 +27,6 @@ def generate_rsa_keys():
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ))
 
-generate_rsa_keys()
-
-
 
 def load_public_key():
     with open("public_key.pem", "rb") as key_file:
@@ -45,17 +43,22 @@ def load_private_key():
 
 def encrypt_with_rsa(public_key, plaintext):
     ciphertext = public_key.encrypt(
-        plaintext.encode(),
+        plaintext.encode('utf-8'),
         padding.OAEP(
             mgf=padding.MGF1(algorithm=hashes.SHA256()),
             algorithm=hashes.SHA256(),
             label=None
         )
     )
-    return ciphertext
+    return base64.b64encode(ciphertext).decode('utf-8')
 
 
-def decrypt_with_rsa(private_key, ciphertext):
+def decrypt_with_rsa(private_key, ciphertext_base64):
+    
+    ciphertext_base64 = add_base64_padding(ciphertext_base64)
+    
+    ciphertext = base64.b64decode(ciphertext_base64)
+    
     plaintext = private_key.decrypt(
         ciphertext,
         padding.OAEP(
@@ -64,12 +67,22 @@ def decrypt_with_rsa(private_key, ciphertext):
             label=None
         )
     )
-    return plaintext.decode()
+    return plaintext.decode('utf-8')
 
-ciphertext = encrypt_with_rsa(load_public_key(), "Hurera Mujeeb")
-print(ciphertext)
-plaintext = decrypt_with_rsa(load_private_key(), ciphertext)
 
-print(plaintext)
+def add_base64_padding(base64_string):
+    # Add padding if needed
+    missing_padding = len(base64_string) % 4
+    if missing_padding != 0:
+        base64_string += '=' * (4 - missing_padding)
+    return base64_string
+
+
+# ciphertext = encrypt_with_rsa(load_public_key(), "Hurera Mujeeb")
+
+# plaintext = decrypt_with_rsa(load_private_key(), ciphertext)
+
+# generate_rsa_keys()
+# print(plaintext)
 
 

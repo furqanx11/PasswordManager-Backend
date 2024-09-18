@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from app.utils.encryption import load_public_key, encrypt_with_rsa
 from app.models import Fields, Projects, Modes
 from app.schemas.encryption_schema import AddKeyRequest
-# from app.config import Tortoise
 
 router = APIRouter()
 

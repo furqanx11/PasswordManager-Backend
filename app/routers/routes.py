@@ -2,8 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Type, TypeVar, Callable
 from pydantic import BaseModel, ValidationError
 from app.exceptions.custom_exceptions import CustomValidationException
-from app.dependencies.auth import get_current_user
-from app.middleware.permissions import has_permission
+from app.middleware.permissions import permission_dependency
 from typing import List, Any
 
 TCreateSchema = TypeVar("TCreateSchema", bound=BaseModel)
@@ -19,18 +18,14 @@ def routes(
     create_schema: Type[TCreateSchema],
     response_schema: Type[TResponseSchema],
     update_schema: Type[TUpdateSchema],
-    pydantic_model: Type = None
+    pydantic_model: Type = None,
+    model_name: str = "MODEL",
 ) -> APIRouter:
     router = APIRouter() 
 
 
-    @router.post("/", response_model=pydantic_model, status_code=status.HTTP_201_CREATED)
-    async def create(item: create_schema, current_user: dict = Depends(get_current_user)):
-            if not await has_permission(current_user, "create"):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You do not have permission to create"
-                )
+    @router.post("/", response_model=pydantic_model, status_code=status.HTTP_201_CREATED, dependencies=[Depends(permission_dependency(f"{model_name}:CREATE"))])
+    async def create(item: create_schema):
             try:
                 item = await create_func(item.dict())
                 if not item:
@@ -39,19 +34,19 @@ def routes(
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))
             
-    @router.get("/", response_model=List[pydantic_model])
+    @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GETALL"))])
     async def read_all():
             items = await get_all()
             return items
 
-    @router.get("/{id}", response_model=pydantic_model)
+    @router.get("/{id}", response_model=response_schema, dependencies=[Depends(permission_dependency(f"{model_name}:GET"))])
     async def read(id: str):
             item = await get_func(id)
             if not item:
                 raise HTTPException(status_code=404, detail="Item not found")
             return item
 
-    @router.patch("/{id}", response_model=pydantic_model)
+    @router.patch("/{id}", response_model=pydantic_model, dependencies=[Depends(permission_dependency(f"{model_name}:UPDATE"))])
     async def update_item(id: str, item: update_schema):
             try:
                 item_data = item.dict(exclude_unset=True)
@@ -62,7 +57,7 @@ def routes(
             except ValidationError as e:
                 raise HTTPException(status_code=422, detail=str(e))
             
-    @router.delete("/{id}", response_model=dict)
+    @router.delete("/{id}", response_model=dict, dependencies=[Depends(permission_dependency(f"{model_name}:DELETE"))])
     async def delete(id: str):
             item_to_delete = await get_func(id)
             if not item_to_delete:

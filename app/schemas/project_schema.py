@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from app.schemas.schema import BaseSchema
 from typing import Optional, List
 from app.models import Field_Pydantic
-
+from app.schemas.field_schema import FieldRead
 
 class ProjectCreate(BaseModel):
     name : str
@@ -21,4 +21,4 @@ class ProjectRead(BaseSchema):
 class ProjectWithFields(BaseSchema):
     name: str
     description: Optional[str] = None
-    fields: Optional[List[Field_Pydantic]] = None
+    fields: Optional[List[FieldRead]] = None

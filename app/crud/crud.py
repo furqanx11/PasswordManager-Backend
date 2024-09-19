@@ -7,15 +7,17 @@ from app.exceptions.custom_exceptions import CustomValidationException
 TModel = TypeVar("TModel", bound=Model)
 
 class CRUD:
-    def __init__(self, model: TModel, model_pydantic):
+    def __init__(self, model: TModel, model_pydantic, related_fields: Optional[List[str]] = None):
         self.model = model
         self.model_pydantic = model_pydantic
+        self.related_fields = related_fields or []
     
 
-    async def get_all(self) -> List[Any]:
-        data = self.model.all()
-        return await self.model_pydantic.from_queryset(data)
-
+    async def get_all(self) -> List:
+        query = self.model.all()
+        if self.related_fields:
+            query = query.prefetch_related(*self.related_fields)
+        return await query.values()
 
     async def create(self, item_data: Dict[str, Any]) -> TModel:
         try:

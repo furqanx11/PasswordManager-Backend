@@ -14,5 +14,6 @@ router = routes(
     create_schema=PermissionCreate,
     response_schema=PermissionRead,
     update_schema=PermissionUpdate,
-    pydantic_model=Permission_Pydantic
+    pydantic_model=Permission_Pydantic,
+    model_name="PERMISSION"
 )

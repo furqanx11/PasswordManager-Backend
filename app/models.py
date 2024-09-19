@@ -14,12 +14,15 @@ class Users(BaseModel):
     username = fields.CharField(max_length=20, unique=True)
     password = fields.CharField(max_length=255) 
     email = fields.CharField(max_length=255, unique=True)
+    is_active = fields.BooleanField(default=True)
+    
 
     class PydanticMeta:
         exclude = ['password'] 
 
 class Roles(BaseModel):
     name = fields.CharField(max_length=20)
+    permissions = fields.ManyToManyField('models.Permissions', through='rolepermissions', related_name='roles')
 
 class UserRoles(BaseModel):
     user = fields.ForeignKeyField('models.Users', related_name='roles')
@@ -27,7 +30,6 @@ class UserRoles(BaseModel):
 
 class Permissions(BaseModel):
     name = fields.CharField(max_length=20)
-    allowed_api = fields.CharField(max_length=50)
 
 class Projects(BaseModel):
     name = fields.CharField(max_length=100)
@@ -48,12 +50,12 @@ class Modes(BaseModel):
     name = fields.CharField(max_length=20)
 
 class RolePermissions(BaseModel):
-    role = fields.ForeignKeyField('models.Roles', related_name='role_permissions')
-    permission = fields.ForeignKeyField('models.Permissions', related_name='role_permissions')
+    role = fields.ForeignKeyField('models.Roles', related_name='role_permissions', to_field = 'id')
+    permission = fields.ForeignKeyField('models.Permissions', related_name='role_permissions', to_field = 'id')
 
 Mode_Pydantic = pydantic_model_creator(Modes, name="Mode")
 ModeIn_Pydantic = pydantic_model_creator(Modes, name="ModeIn", exclude_readonly=True)
-Field_Pydantic = pydantic_model_creator(Fields, name="Field")
+Field_Pydantic = pydantic_model_creator(Fields, name="Field", include=("id", "key", "value", "description", "project_id", "mode_id", "created_at", "updated_at"))
 FieldIn_Pydantic = pydantic_model_creator(Fields, name="FieldIn", exclude_readonly=True)
 UserProject_Pydantic = pydantic_model_creator(UserProjects, name="UserProject")
 UserProjectIn_Pydantic = pydantic_model_creator(UserProjects, name="UserProjectIn", exclude_readonly=True)

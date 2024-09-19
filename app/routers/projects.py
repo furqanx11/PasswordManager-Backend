@@ -14,5 +14,6 @@ router = routes(
     create_schema=ProjectCreate,
     response_schema=ProjectRead,
     update_schema=ProjectUpdate,
-    pydantic_model=Project_Pydantic
+    pydantic_model=Project_Pydantic,
+    model_name="PROJECT"
 )

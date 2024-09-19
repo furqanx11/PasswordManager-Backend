@@ -3,7 +3,7 @@ from app.schemas.user_role_schema import UserRoleCreate, UserRoleRead, UserRoleU
 from app.routers.routes import routes
 from app.models import UserRoles, UserRole_Pydantic
 
-user_role = CRUD(UserRoles, UserRole_Pydantic)
+user_role = CRUD(UserRoles, UserRole_Pydantic, related_fields=['user', 'role'])
 
 router = routes(
     create_func=user_role.create,
@@ -14,5 +14,6 @@ router = routes(
     create_schema=UserRoleCreate,
     response_schema=UserRoleRead,
     update_schema=UserRoleUpdate,
-    pydantic_model=UserRole_Pydantic
+    pydantic_model=UserRole_Pydantic,
+    model_name="ASSIGN_ROLE"
 )

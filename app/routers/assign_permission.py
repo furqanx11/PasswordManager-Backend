@@ -3,7 +3,7 @@ from app.schemas.role_permission_schema import RolePermissionCreate, RolePermiss
 from app.routers.routes import routes
 from app.models import RolePermissions, RolePermission_Pydantic
 
-role_permission = CRUD(RolePermissions, RolePermission_Pydantic)
+role_permission = CRUD(RolePermissions, RolePermission_Pydantic, related_fields=['role', 'permission'])
 
 router = routes(
     create_func=role_permission.create,
@@ -14,5 +14,6 @@ router = routes(
     create_schema=RolePermissionCreate,
     response_schema=RolePermissionRead,
     update_schema=RolePermissionUpdate,
-    pydantic_model=RolePermission_Pydantic
+    pydantic_model=RolePermission_Pydantic,
+    model_name="ASSIGN_PERMISSION"
 )

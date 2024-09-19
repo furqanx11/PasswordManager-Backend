@@ -14,5 +14,6 @@ router = routes(
     create_schema=ModeCreate,
     response_schema=ModeRead,
     update_schema=ModeUpdate,
-    pydantic_model= Mode_Pydantic
+    pydantic_model= Mode_Pydantic,
+    model_name="MODE"
 )

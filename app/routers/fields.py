@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from tortoise.contrib.pydantic import pydantic_queryset_creator
 from typing import List, Optional
 
-field = CRUD(Fields, Field_Pydantic)
+field = CRUD(Fields, Field_Pydantic, related_fields=['project', 'mode'])
 
 router = routes(
     create_func=field.create,
@@ -17,13 +17,14 @@ router = routes(
     create_schema=FieldCreate,
     response_schema=FieldRead,
     update_schema=FieldUpdate,
-    pydantic_model=Field_Pydantic
+    pydantic_model=Field_Pydantic,
+    model_name="FIELD" 
 )
 
 
 additional_router = APIRouter()
 
-@additional_router.get("/", response_model=List[Field_Pydantic])
+@additional_router.get("/", response_model=List[FieldRead])
 async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Optional[str] = None):
     project = await Projects.get_or_none(name=project_name)
     mode = await Modes.get_or_none(name=mode_name)

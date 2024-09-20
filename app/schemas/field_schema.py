@@ -24,7 +24,7 @@ class FieldRead(BaseSchema):
     key: str
     value: str
     description: Optional[str] = None
-    project_id: int  # Include project_id field
+    project_id: Optional[int] = None  # Include project_id field
     mode_id: int  # Include mode_id field
     created_at: datetime  # Include created_at field
     updated_at: datetime  # Include updated_at field

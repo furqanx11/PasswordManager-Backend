@@ -96,28 +96,26 @@ async def get_user_projects(user_id: int):
     projects = [user_project.project for user_project in user_projects]
     project_ids = [project.id for project in projects]
 
-    # Ensure that fields include project_id and mode_id
-    fields = await Fields.filter(project_id__in=project_ids).prefetch_related('project', 'mode')
-    
+    # Fetch fields as dictionaries
+    fields = await Fields.filter(project_id__in=project_ids).values()
+
     fields_by_project = {}
     for field in fields:
-        if field.project_id not in fields_by_project:
-            fields_by_project[field.project_id] = []
-        fields_by_project[field.project_id].append(field)
+        if field['project_id'] not in fields_by_project:
+            fields_by_project[field['project_id']] = []
+        fields_by_project[field['project_id']].append(field)
 
     project_data = []
     for project in projects:
-        project_pydantic = await Project_Pydantic.from_tortoise_orm(project)
-        project_dict = project_pydantic.dict()
+        project_dict = await Project_Pydantic.from_tortoise_orm(project)
+        project_dict = project_dict.dict()
 
-        # Use Field_Pydantic to serialize the fields properly, ensuring project_id and mode_id are included
-        project_dict['fields'] = await Field_Pydantic.from_queryset(
-            Fields.filter(project_id=project.id).prefetch_related('project', 'mode')
-        )
+        # Add fields to the project dictionary
+        project_dict['fields'] = fields_by_project.get(project.id, [])
+        
         project_data.append(project_dict)
 
     return project_data
-
 
 @router.get("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:GET"))])
 async def get_user_by_id(user_id: int):

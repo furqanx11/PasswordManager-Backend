@@ -34,12 +34,16 @@ async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Opti
 
     filters = {}
     if project:
-        filters['project'] = project
+        filters['project_id'] = project.id  # Use project ID in filter
     if mode:
-        filters['mode'] = mode
+        filters['mode_id'] = mode.id  # Use mode ID in filter
 
-    fields_queryset = Fields.filter(**filters)
-    fields = await Field_Pydantic.from_queryset(fields_queryset)
-    return fields
+    # Using .values() to retrieve the fields directly
+    fields_queryset = await Fields.filter(**filters).values('id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at')
+    
+    if not fields_queryset:
+        raise HTTPException(status_code=404, detail="No fields found.")
+
+    return fields_queryset
 
 router.include_router(additional_router)

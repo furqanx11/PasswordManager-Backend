@@ -3,7 +3,9 @@ from typing import Type, TypeVar, Callable
 from pydantic import BaseModel, ValidationError
 from app.exceptions.custom_exceptions import CustomValidationException
 from app.middleware.permissions import permission_dependency
-from typing import List, Any
+from typing import List, Any, Optional
+from app.models import Projects, Modes, Fields
+from app.schemas.field_schema import FieldRead
 
 TCreateSchema = TypeVar("TCreateSchema", bound=BaseModel)
 TResponseSchema = TypeVar("TResponseSchema", bound=BaseModel)
@@ -33,11 +35,38 @@ def routes(
                 return item
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))
-            
-    @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GETALL"))])
-    async def read_all():
+
+    @router.get("/", response_model=List[FieldRead])
+    async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Optional[str] = None):
+
+        if not mode_name and not project_name:
             items = await get_all()
             return items
+
+        project = await Projects.get_or_none(name=project_name)
+        mode = await Modes.get_or_none(name=mode_name)
+
+        if not project and not mode:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        filters = {}
+        if project:
+            filters['project_id'] = project.id  
+        if mode:
+            filters['mode_id'] = mode.id  
+
+        
+        fields_queryset = await Fields.filter(**filters).values('id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at')
+        
+        if not fields_queryset:
+            raise HTTPException(status_code=404, detail="No fields found.")
+
+        return fields_queryset   
+        
+    # @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GETALL"))])
+    # async def read_all():
+    #         items = await get_all()
+    #         return items
 
     @router.get("/{id}", response_model=response_schema, dependencies=[Depends(permission_dependency(f"{model_name}:GET"))])
     async def read(id: str):

@@ -36,7 +36,7 @@ def routes(
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))
 
-    @router.get("/", response_model=List[FieldRead])
+    @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GETALL"))])
     async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Optional[str] = None):
 
         if not mode_name and not project_name:

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from app.models import Users, User_Pydantic
 from app.schemas.user_schema import UserCreate, UserUpdate, UserRead
 from app.schemas.project_schema import ProjectWithFields
-from app.utils.jwt import create_access_token, verify_password, get_password_hash
+from app.utils.jwt import create_access_token, verify_password, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 from datetime import timedelta
 from app.dependencies.auth import get_current_user
 from app.crud.crud import CRUD
@@ -14,6 +14,8 @@ from tortoise.transactions import in_transaction
 
 router = APIRouter()
 user_crud = CRUD(Users, User_Pydantic)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 @router.post("/register", response_model=UserRead)
 async def register_user(user: UserCreate):
@@ -35,8 +37,8 @@ async def login_for_access_token(response: Response, form_data: OAuth2PasswordRe
         if not user or not verify_password(form_data.password, user.password):
             raise HTTPException(status_code=401, detail="Incorrect username or password")
         
-        access_token_expires = timedelta(minutes=30)
-        access_token = await create_access_token(user, expires_delta=access_token_expires)  
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = await create_access_token(user)  
         
         response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
         return {"access_token": access_token, "token_type": "bearer"}
@@ -144,3 +146,16 @@ async def delete_user_by_id(user_id: int):
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/refresh_token")
+async def refresh_token(response: Response, current_user: Users = Depends(get_current_user)):
+    try:
+        user = await Users.get_or_none(username=current_user['username'])  
+        
+        access_token_expires = timedelta(minutes=30)
+        access_token = await create_access_token(user, expires_delta=access_token_expires)  
+        
+        response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException as e:
+        raise e

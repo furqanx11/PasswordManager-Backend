@@ -11,8 +11,10 @@ async def create_default_user():
     if not user:
         user = await Users.create(name = name, username=username, email=email, password=password)
         print(f"Created default user: {username}")
+        return 
     else:
         print(f"User {username} already exists")
+        return None
 
 
 async def create_role():
@@ -31,6 +33,8 @@ async def assign_role():
     print(f"Assigned role {role} to user {user}")
 
 async def create_admin():
-    await create_default_user()
-    await create_role()
-    await assign_role()
+    user = await create_default_user()
+    if user is not None:
+        await create_role()
+        await assign_role()
+    

@@ -7,15 +7,16 @@ from app.models import Users, UserRoles
 
 SECRET_KEY = "abcd"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 99999999999999999
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def create_access_token(user: Users, expires_delta: Optional[timedelta] = None):
     user_roles = await UserRoles.filter(user=user.id).select_related('role')
+    print(user_roles)
     role_names = [user_role.role.name for user_role in user_roles]
-
-    to_encode = {"sub": user.username, "roles": role_names}
+    print(role_names)
+    to_encode = {"sub": user.username, "roles": list(role_names)}
     
     if expires_delta:
         expire = datetime.utcnow() + expires_delta

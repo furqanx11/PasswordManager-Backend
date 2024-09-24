@@ -15,7 +15,6 @@ class Users(BaseModel):
     password = fields.CharField(max_length=255) 
     email = fields.CharField(max_length=255, unique=True)
     is_active = fields.BooleanField(default=True)
-    
 
     # class PydanticMeta:
     #     exclude = ['password'] 

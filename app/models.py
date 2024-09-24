@@ -43,7 +43,7 @@ class Fields(BaseModel):
     project = fields.ForeignKeyField('models.Projects', related_name='fields')
     mode = fields.ForeignKeyField('models.Modes', related_name='fields')
     key = fields.CharField(max_length=50)
-    value = fields.CharField(max_length=255)  
+    value = fields.CharField(max_length=512)  
     description = fields.CharField(max_length=255, null=True)
 
 class Modes(BaseModel):

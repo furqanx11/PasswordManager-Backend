@@ -16,13 +16,16 @@ user_crud = CRUD(Users, User_Pydantic)
 
 @router.post("/register", response_model=UserRead)
 async def register_user(user: UserCreate):
-    user_obj = await Users.create(
-        name = user.name,
-        username=user.username,
-        email=user.email,
-        password=get_password_hash(user.password)
-    )
-    return await User_Pydantic.from_tortoise_orm(user_obj)
+    try:
+        user_obj = await Users.create(
+            name = user.name,
+            username=user.username,
+            email=user.email,
+            password=get_password_hash(user.password)
+        )
+        return await User_Pydantic.from_tortoise_orm(user_obj)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/login")
 async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
@@ -36,18 +39,14 @@ async def login_for_access_token(response: Response, form_data: OAuth2PasswordRe
     response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.patch("/me", response_model=UserRead)
+@router.patch("/me", response_model=UserUpdate)
 async def update_user_me(user_update: UserUpdate, current_user: Users = Depends(get_current_user)):
     user_data = user_update.dict(exclude_unset=True)
     for key, value in user_data.items():
-        setattr(current_user['user'], key, value)
+        user_to_update = await Users.get(username=current_user['username'])
+        setattr(user_to_update, key, value)
     await current_user.save()
-    return await User_Pydantic.from_tortoise_orm(current_user)
-
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user_me(current_user: Users = Depends(get_current_user)):
-    await current_user.delete()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return await User_Pydantic.from_tortoise_orm(user_to_update)
 
 @router.get("/me", response_model=UserRead)
 async def read_users_me(current_user: Users = Depends(get_current_user)):
@@ -88,34 +87,37 @@ async def get_all_users():
 
 @router.get("/user/{user_id}/projects", response_model=List[ProjectWithFields])
 async def get_user_projects(user_id: int):
-    user = await Users.get(id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        user = await Users.get(id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    user_projects = await UserProjects.filter(user_id=user_id).prefetch_related('project')
-    projects = [user_project.project for user_project in user_projects]
-    project_ids = [project.id for project in projects]
+        user_projects = await UserProjects.filter(user_id=user_id).prefetch_related('project')
+        projects = [user_project.project for user_project in user_projects]
+        project_ids = [project.id for project in projects]
 
-    # Fetch fields as dictionaries
-    fields = await Fields.filter(project_id__in=project_ids).values()
+        # Fetch fields as dictionaries
+        fields = await Fields.filter(project_id__in=project_ids).values()
 
-    fields_by_project = {}
-    for field in fields:
-        if field['project_id'] not in fields_by_project:
-            fields_by_project[field['project_id']] = []
-        fields_by_project[field['project_id']].append(field)
+        fields_by_project = {}
+        for field in fields:
+            if field['project_id'] not in fields_by_project:
+                fields_by_project[field['project_id']] = []
+            fields_by_project[field['project_id']].append(field)
 
-    project_data = []
-    for project in projects:
-        project_dict = await Project_Pydantic.from_tortoise_orm(project)
-        project_dict = project_dict.dict()
+        project_data = []
+        for project in projects:
+            project_dict = await Project_Pydantic.from_tortoise_orm(project)
+            project_dict = project_dict.dict()
 
-        # Add fields to the project dictionary
-        project_dict['fields'] = fields_by_project.get(project.id, [])
-        
-        project_data.append(project_dict)
+            # Add fields to the project dictionary
+            project_dict['fields'] = fields_by_project.get(project.id, [])
+            
+            project_data.append(project_dict)
 
-    return project_data
+        return project_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:GET"))])
 async def get_user_by_id(user_id: int):

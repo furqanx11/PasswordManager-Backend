@@ -4,3 +4,5 @@ migrations
 docker-compose.yml
 .env
 .gitignore
+private_key.pem
+public_key.pem

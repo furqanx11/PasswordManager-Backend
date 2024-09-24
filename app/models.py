@@ -17,8 +17,8 @@ class Users(BaseModel):
     is_active = fields.BooleanField(default=True)
     
 
-    class PydanticMeta:
-        exclude = ['password'] 
+    # class PydanticMeta:
+    #     exclude = ['password'] 
 
 class Roles(BaseModel):
     name = fields.CharField(max_length=20)

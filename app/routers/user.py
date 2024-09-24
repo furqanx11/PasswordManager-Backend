@@ -10,6 +10,7 @@ from app.crud.crud import CRUD
 from typing import List
 from app.models import UserProjects, Project_Pydantic,Field_Pydantic, Fields
 from app.middleware.permissions import permission_dependency
+from tortoise.transactions import in_transaction
 
 router = APIRouter()
 user_crud = CRUD(Users, User_Pydantic)
@@ -29,24 +30,38 @@ async def register_user(user: UserCreate):
 
 @router.post("/login")
 async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
-    user = await Users.get_or_none(username=form_data.username)  
-    if not user or not verify_password(form_data.password, user.password):
-        raise HTTPException(status_code=401, detail="Incorrect username or password")
-    
-    access_token_expires = timedelta(minutes=30)
-    access_token = await create_access_token(user, expires_delta=access_token_expires)  
-    
-    response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        user = await Users.get_or_none(username=form_data.username)  
+        if not user or not verify_password(form_data.password, user.password):
+            raise HTTPException(status_code=401, detail="Incorrect username or password")
+        
+        access_token_expires = timedelta(minutes=30)
+        access_token = await create_access_token(user, expires_delta=access_token_expires)  
+        
+        response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/me", response_model=UserUpdate)
 async def update_user_me(user_update: UserUpdate, current_user: Users = Depends(get_current_user)):
-    user_data = user_update.dict(exclude_unset=True)
-    for key, value in user_data.items():
-        user_to_update = await Users.get(username=current_user['username'])
-        setattr(user_to_update, key, value)
-    await current_user.save()
-    return await User_Pydantic.from_tortoise_orm(user_to_update)
+        async with in_transaction():
+            # Fetch the current user from the database
+            current_user = await Users.get(id=current_user['id'])
+            # Update only the fields that are provided in the request
+            if user_update.name is not None:
+                current_user.name = user_update.name
+            if user_update.username is not None:
+                current_user.username = user_update.username
+            if user_update.email is not None:
+                current_user.email = user_update.email
+            if user_update.password is not None:
+                current_user.password = get_password_hash(user_update.password)
+
+            # Save the updated user
+            await current_user.save()
+
+            return await User_Pydantic.from_tortoise_orm(current_user)
 
 @router.get("/me", response_model=UserRead)
 async def read_users_me(current_user: Users = Depends(get_current_user)):
@@ -58,32 +73,6 @@ async def read_users_me(current_user: Users = Depends(get_current_user)):
 async def get_all_users():
     users = Users.all()
     return await User_Pydantic.from_queryset(users)
-
-# @router.get("/user/{user_id}/projects", response_model=List[ProjectWithFields], dependencies=[Depends(permission_dependency("USER:PROJECTS"))])
-# async def get_user_projects(user_id: int):
-#     user = await Users.get(id=user_id)
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-    
-#     user_projects = await UserProjects.filter(user_id=user_id).prefetch_related('project')
-#     projects = [user_project.project for user_project in user_projects]
-#     project_ids = [project.id for project in projects]
-    
-#     fields = await Fields.filter(project_id__in=project_ids).prefetch_related('project', 'mode')
-#     fields_by_project = {}
-#     for field in fields:
-#         if field.project_id not in fields_by_project:
-#             fields_by_project[field.project_id] = []
-#         fields_by_project[field.project_id].append(field)
-    
-#     project_data = []
-#     for project in projects:
-#         project_pydantic = await Project_Pydantic.from_tortoise_orm(project)
-#         project_dict = project_pydantic.dict()
-#         project_dict['fields'] = await Field_Pydantic.from_queryset(Fields.filter(project_id=project.id))
-#         project_data.append(project_dict)
-    
-#     return project_data
 
 @router.get("/user/{user_id}/projects", response_model=List[ProjectWithFields])
 async def get_user_projects(user_id: int):
@@ -121,28 +110,37 @@ async def get_user_projects(user_id: int):
 
 @router.get("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:GET"))])
 async def get_user_by_id(user_id: int):
-    user = await Users.get(id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return await User_Pydantic.from_tortoise_orm(user)
+    try:
+        user = await Users.get(id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return await User_Pydantic.from_tortoise_orm(user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:UPDATE"))])
 async def update_user_by_id(user_id: int, user_update: UserUpdate):
-    user = await Users.get(id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        user = await Users.get(id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = user_update.dict(exclude_unset=True)
+        for key, value in user_data.items():
+            setattr(user, key, value)
+        await user.save()
+        return await User_Pydantic.from_tortoise_orm(user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
-    user_data = user_update.dict(exclude_unset=True)
-    for key, value in user_data.items():
-        setattr(user, key, value)
-    await user.save()
-    return await User_Pydantic.from_tortoise_orm(user)
-
 @router.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(permission_dependency("USER:DELETE"))])
 async def delete_user_by_id(user_id: int):
-    user = await Users.get(id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    await user.delete()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    try:
+        user = await Users.get(id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        await user.delete()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

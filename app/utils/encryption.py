@@ -157,7 +157,7 @@ def add_base64_padding(base64_string):
     return base64_string
 
 # Generate RSA keys first
-generate_rsa_keys()
+# generate_rsa_keys()
 
 # Load the keys
 public_key = load_public_key()

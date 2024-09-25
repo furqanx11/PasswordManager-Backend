@@ -135,12 +135,15 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from app.utils.encryption import load_public_key, encrypt_with_rsa, load_private_key, decrypt_with_rsa
 from app.schemas.encryption_schema import AddKeyRequest
+from app.middleware.permissions import permission_dependency
 
 field = CRUD(Fields, Field_Pydantic, related_fields=['project', 'mode'])
 
 router = APIRouter()
 
-@router.post("/add_key")
+from fastapi import Depends, status
+
+@router.post("/add_key", status_code=status.HTTP_201_CREATED, dependencies=[Depends(permission_dependency("field:CREATE"))])
 async def add_key(body: AddKeyRequest):
     public_key = load_public_key()
     encrypted_value = encrypt_with_rsa(public_key, body.value)
@@ -153,7 +156,6 @@ async def add_key(body: AddKeyRequest):
     if not mode:
         raise HTTPException(status_code=404, detail="Mode not found")
 
-
     field = await Fields.create(
         project_id=body.project_id,
         mode_id=body.mode_id,
@@ -164,7 +166,7 @@ async def add_key(body: AddKeyRequest):
 
     return {"message": "Key encrypted and stored successfully!", "field_id": field.id}
 
-@router.get("/get_key/{field_id}")
+@router.get("/get_key/{field_id}", dependencies=[Depends(permission_dependency("field:GET"))])
 async def get_key(field_id: int):
     try:
         field = await Fields.get_or_none(id=field_id)
@@ -183,7 +185,7 @@ async def get_key(field_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/delete_key/{field_id}")
+@router.delete("/delete_key/{field_id}", dependencies=[Depends(permission_dependency("field:DELETE"))])
 async def delete_key(field_id: int):
     field = await Fields.get_or_none(id=field_id)
     if not field:
@@ -192,7 +194,7 @@ async def delete_key(field_id: int):
     await field.delete()
     return {"message": "Key deleted successfully"}
 
-@router.patch("/update_key/{field_id}")
+@router.patch("/update_key/{field_id}", dependencies=[Depends(permission_dependency("field:UPDATE"))])
 async def update_key(field_id: int, body: AddKeyRequest):
     field = await Fields.get_or_none(id=field_id)
     if not field:
@@ -212,22 +214,30 @@ async def update_key(field_id: int, body: AddKeyRequest):
 
     return {"message": "Key updated successfully", "field_id": field.id}
 
-@router.get("/", response_model=List[FieldRead])
+@router.get("/", response_model=List[FieldRead], dependencies=[Depends(permission_dependency(f"field:GETALL"))])
 async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Optional[str] = None):
+    if not project_name and not mode_name:
+        fields_queryset = await Fields.all().values(
+            'id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at'
+        )
+        return fields_queryset
+
     project = await Projects.get_or_none(name=project_name)
     mode = await Modes.get_or_none(name=mode_name)
 
     if not project and not mode:
-        raise HTTPException(status_code=404, detail="Project/Mode Not found")
+        raise HTTPException(status_code=404, detail="Project or Mode not found")
 
     filters = {}
     if project:
-        filters['project_id'] = project.id  # Use project ID in filter
+        filters['project_id'] = project.id 
     if mode:
-        filters['mode_id'] = mode.id  # Use mode ID in filter
+        filters['mode_id'] = mode.id  
 
-    # Using .values() to retrieve the fields directly
-    fields_queryset = await Fields.filter(**filters).values('id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at')
+    # Retrieve the filtered results
+    fields_queryset = await Fields.filter(**filters).values(
+        'id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at'
+    )
     
     if not fields_queryset:
         raise HTTPException(status_code=404, detail="No fields found.")

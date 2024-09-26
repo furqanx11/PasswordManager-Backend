@@ -122,12 +122,27 @@ async def get_user_by_id(user_id: int):
 
 @router.patch("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:UPDATE"))])
 async def update_user_by_id(user_id: int, user_update: UserUpdate):
+    # try:
+    #     user = await Users.get(id=user_id)
+    #     if not user:
+    #         raise HTTPException(status_code=404, detail="User not found")
+        
+    #     user_data = user_update.dict(exclude_unset=True)
+    #     for key, value in user_data.items():
+    #         setattr(user, key, value)
+    #     await user.save()
+    #     return await User_Pydantic.from_tortoise_orm(user)
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
     try:
         user = await Users.get(id=user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         user_data = user_update.dict(exclude_unset=True)
+        if 'password' in user_data:
+            user_data['password'] = get_password_hash(user_data['password'])
+        
         for key, value in user_data.items():
             setattr(user, key, value)
         await user.save()

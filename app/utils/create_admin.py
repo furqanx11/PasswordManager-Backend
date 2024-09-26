@@ -29,12 +29,18 @@ async def create_role():
 async def assign_role():
     user = await Users.get(username="admin")
     role = await Roles.get(name="admin")
-    await UserRoles.create(user_id=user.id, role_id=role.id)
-    print(f"Assigned role {role} to user {user}")
+    
+    # Check if the role is already assigned to the user
+    existing_assignment = await UserRoles.filter(user_id=user.id, role_id=role.id).first()
+    
+    if existing_assignment:
+        print(f"Role {role.name} is already assigned to user {user.username}")
+    else:
+        await UserRoles.create(user_id=user.id, role_id=role.id)
+        print(f"Assigned role {role.name} to user {user.username}")
 
 async def create_admin():
-    user = await create_default_user()
-    if user is not None:
-        await create_role()
-        await assign_role()
+    await create_default_user()
+    await create_role()
+    await assign_role()
     

@@ -134,7 +134,7 @@ from app.models import Fields, Field_Pydantic, Modes, Projects
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from app.utils.encryption import load_public_key, encrypt_with_rsa, load_private_key, decrypt_with_rsa
-from app.schemas.encryption_schema import AddKeyRequest
+from app.schemas.encryption_schema import AddKeyRequest, update_key
 from app.middleware.permissions import permission_dependency
 
 field = CRUD(Fields, Field_Pydantic, related_fields=['project', 'mode'])
@@ -195,7 +195,7 @@ async def delete_key(field_id: int):
     return {"message": "Key deleted successfully"}
 
 @router.patch("/update_key/{field_id}", dependencies=[Depends(permission_dependency("field:UPDATE"))])
-async def update_key(field_id: int, body: AddKeyRequest):
+async def update_key(field_id: int, body: update_key):
     field = await Fields.get_or_none(id=field_id)
     if not field:
         raise HTTPException(status_code=404, detail="Field not found")
@@ -214,12 +214,18 @@ async def update_key(field_id: int, body: AddKeyRequest):
 
     return {"message": "Key updated successfully", "field_id": field.id}
 
+    
+
 @router.get("/", response_model=List[FieldRead], dependencies=[Depends(permission_dependency(f"field:GETALL"))])
 async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Optional[str] = None):
     if not project_name and not mode_name:
         fields_queryset = await Fields.all().values(
             'id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at'
         )
+        private_key = load_private_key()
+        for field in fields_queryset:
+            decrypted_value = decrypt_with_rsa(private_key, field['value'])
+            field['value'] = decrypted_value
         return fields_queryset
 
     project = await Projects.get_or_none(name=project_name)
@@ -241,9 +247,10 @@ async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Opti
     
     if not fields_queryset:
         raise HTTPException(status_code=404, detail="No fields found.")
+    
+    private_key = load_private_key()
+    for field in fields_queryset:
+            decrypted_value = decrypt_with_rsa(private_key, field['value'])
+            field['value'] = decrypted_value
 
     return fields_queryset
-
-@router.get("/fields", response_model=List[FieldRead])
-async def get_all_fields():
-    return await field.get_all()

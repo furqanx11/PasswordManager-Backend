@@ -11,11 +11,15 @@ from typing import List
 from app.models import UserProjects, Project_Pydantic,Field_Pydantic, Fields
 from app.middleware.permissions import permission_dependency
 from tortoise.transactions import in_transaction
+from app.exceptions.custom_exceptions import CustomValidationException
+import logging
 
 router = APIRouter()
 user_crud = CRUD(Users, User_Pydantic)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @router.post("/register", response_model=UserRead)
 async def register_user(user: UserCreate):
@@ -79,9 +83,9 @@ async def get_all_users():
 @router.get("/user/{user_id}/projects", response_model=List[ProjectWithFields])
 async def get_user_projects(user_id: int):
     try:
-        user = await Users.get(id=user_id)
+        user = await Users.get_or_none(id=user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="User not found.")
 
         user_projects = await UserProjects.filter(user_id=user_id).prefetch_related('project')
         projects = [user_project.project for user_project in user_projects]
@@ -107,37 +111,31 @@ async def get_user_projects(user_id: int):
             project_data.append(project_dict)
 
         return project_data
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+        logger.error(f"Error updating user with id {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
 @router.get("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:GET"))])
 async def get_user_by_id(user_id: int):
     try:
-        user = await Users.get(id=user_id)
+        user = await Users.get_or_none(id=user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="User not found.")
         return await User_Pydantic.from_tortoise_orm(user)
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching user with id {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.patch("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:UPDATE"))])
 async def update_user_by_id(user_id: int, user_update: UserUpdate):
-    # try:
-    #     user = await Users.get(id=user_id)
-    #     if not user:
-    #         raise HTTPException(status_code=404, detail="User not found")
-        
-    #     user_data = user_update.dict(exclude_unset=True)
-    #     for key, value in user_data.items():
-    #         setattr(user, key, value)
-    #     await user.save()
-    #     return await User_Pydantic.from_tortoise_orm(user)
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=str(e))
     try:
-        user = await Users.get(id=user_id)
+        user = await Users.get_or_none(id=user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+           raise HTTPException(status_code=404, detail="User not found.")
         
         user_data = user_update.dict(exclude_unset=True)
         if 'password' in user_data:
@@ -147,20 +145,26 @@ async def update_user_by_id(user_id: int, user_update: UserUpdate):
             setattr(user, key, value)
         await user.save()
         return await User_Pydantic.from_tortoise_orm(user)
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error updating user with id {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     
 @router.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(permission_dependency("USER:DELETE"))])
 async def delete_user_by_id(user_id: int):
     try:
-        user = await Users.get(id=user_id)
+        user = await Users.get_or_none(id=user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="User not found.")
         
         await user.delete()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error updating user with id {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/refresh_token")
 async def refresh_token(response: Response, current_user: Users = Depends(get_current_user)):

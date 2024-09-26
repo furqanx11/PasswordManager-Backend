@@ -9,9 +9,9 @@ from app.dependencies.auth import get_current_user
 from app.crud.crud import CRUD
 from typing import List
 from app.models import UserProjects, Project_Pydantic,Field_Pydantic, Fields
-from app.middleware.permissions import permission_dependency
+from app.middleware.permissions import permission_dependency, has_permission
 from tortoise.transactions import in_transaction
-from app.exceptions.custom_exceptions import CustomValidationException
+from app.routers.fields import get_fields_by_mode
 import logging
 
 router = APIRouter()
@@ -105,8 +105,14 @@ async def get_user_projects(user_id: int):
             project_dict = await Project_Pydantic.from_tortoise_orm(project)
             project_dict = project_dict.dict()
 
-            # Add fields to the project dictionary
-            project_dict['fields'] = fields_by_project.get(project.id, [])
+            modes = await has_permission(None, "FIELD:GET:MODE", user_id)
+            print(modes)
+            if "ALL" in modes:
+                keys = await get_fields_by_mode(None, project.name)
+                project_dict['fields'] = keys
+            elif modes:
+                project_dict['fields'] = await get_fields_by_mode(modes, project.name)
+    
             
             project_data.append(project_dict)
 
@@ -114,8 +120,7 @@ async def get_user_projects(user_id: int):
     except HTTPException as e:
         raise e
     except Exception as e:
-        logger.error(f"Error updating user with id {user_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
     
 @router.get("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:GET"))])
 async def get_user_by_id(user_id: int):
@@ -178,3 +183,4 @@ async def refresh_token(response: Response, current_user: Users = Depends(get_cu
         return {"access_token": access_token, "token_type": "bearer"}
     except HTTPException as e:
         raise e
+

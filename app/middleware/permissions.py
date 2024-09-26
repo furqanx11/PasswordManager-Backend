@@ -39,9 +39,13 @@ from typing import Dict, Any
 #         status_code=status.HTTP_403_FORBIDDEN,
 #         detail="You do not have the necessary permissions",
 #     )
-async def has_permission(current_user: Dict[str, Any], required_perm: str) -> bool:
-    user_id = current_user['id']
+async def has_permission(current_user: Dict[str, Any] , required_perm: str, user_id = None) -> bool:
+    if current_user:
+        user_id = current_user['id']
+    else:
+        user_id = user_id
 
+    field_perms = []
     # Fetch user roles with related role details
     user_roles = await UserRoles.filter(user_id=user_id).prefetch_related('role')
 
@@ -52,14 +56,20 @@ async def has_permission(current_user: Dict[str, Any], required_perm: str) -> bo
         
     for user_role in user_roles:
         role_id = user_role.role.id
-
         # Fetch role permissions with related permission details
         role_permissions = await RolePermissions.filter(role_id=role_id).prefetch_related('permission')
 
+
         # Check if the user has the required permission
         for role_permission in role_permissions:
-            if role_permission.permission.name == required_perm:
+            if required_perm == 'FIELD:GET:MODE':
+                if role_permission.permission.name.startswith('FIELD:GET:'):
+                    field_perms.append(role_permission.permission.name)
+            elif role_permission.permission.name == required_perm:
                 return True
+            
+        if required_perm == 'FIELD:GET:MODE':
+            return [item.split(":")[-1] for item in field_perms]
 
     # If no 'admin' role is found, raise an exception
     raise HTTPException(

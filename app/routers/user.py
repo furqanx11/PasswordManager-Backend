@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from app.models import Users, User_Pydantic
+from app.models import Users, User_Pydantic, UserRoles, Role_Pydantic, RolePermissions,Permission_Pydantic, Roles, Permissions
 from app.schemas.user_schema import UserCreate, UserUpdate, UserRead
 from app.schemas.project_schema import ProjectWithFields
 from app.utils.jwt import create_access_token, verify_password, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -184,3 +184,25 @@ async def refresh_token(response: Response, current_user: Users = Depends(get_cu
     except HTTPException as e:
         raise e
 
+@router.get("/me/roles", response_model=List[Role_Pydantic])
+async def get_user_roles(current_user: Users = Depends(get_current_user)):
+    try:
+        user_id = int(current_user['id'])
+        user_roles = await UserRoles.filter(user_id=user_id).values()
+        role_ids = [user_role['role_id'] for user_role in user_roles]
+        roles = await Role_Pydantic.from_queryset(Roles.filter(id__in=role_ids))
+        return roles
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error{str(e)}")
+    
+@router.get("/me/permissions", response_model=List[Permission_Pydantic])
+async def get_user_permissions(current_user: Users = Depends(get_current_user)):
+    try:
+        user_roles = await UserRoles.filter(user_id=current_user['id']).values()
+        role_ids = [user_role['role_id'] for user_role in user_roles]
+        role_permissions = await RolePermissions.filter(role_id__in=role_ids).values()
+        permission_ids = [role_permission['permission_id'] for role_permission in role_permissions]
+        permissions = await Permission_Pydantic.from_queryset(Permissions.filter(id__in=permission_ids))
+        return permissions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")

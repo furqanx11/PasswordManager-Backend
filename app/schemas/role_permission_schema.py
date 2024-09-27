@@ -1,11 +1,10 @@
 from app.schemas.schema import BaseSchema
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, Union, List
+from pydantic import BaseModel, Field
 
 class RolePermissionCreate(BaseModel):
     role_id: int
-    permission_id: int
-
+    permission_id: Union[int, List[int]]
 class RolePermissionUpdate(BaseModel):
     role_id : Optional[int] = None
     permission_id : Optional[int] = None

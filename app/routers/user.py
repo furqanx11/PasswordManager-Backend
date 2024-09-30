@@ -106,8 +106,6 @@ async def get_user_projects(user_id: int):
             project_dict = project_dict.dict()
 
             modes = await has_permission(None, "FIELD:GET:MODE", user_id)
-            print(modes)
-            print("modes")
             if modes == True:
                 keys = await get_fields_by_mode(None, project.name)
                 project_dict['fields'] = keys

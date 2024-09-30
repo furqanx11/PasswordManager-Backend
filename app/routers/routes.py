@@ -3,9 +3,11 @@ from typing import Type, TypeVar, Callable
 from pydantic import BaseModel, ValidationError
 from app.exceptions.custom_exceptions import CustomValidationException
 from app.middleware.permissions import permission_dependency
-from typing import List, Any, Optional
-from app.models import Projects, Modes, Fields
-from app.schemas.field_schema import FieldRead
+from typing import List, Any
+from app.models import Projects, Users, Roles, Permissions
+from app.schemas.role_permission_schema import RolePermissionCreate
+from app.schemas.userproject_schema import UserProjectCreate
+from app.utils.assignment_functions import assign_permissions, assign_project_to_users
 
 TCreateSchema = TypeVar("TCreateSchema", bound=BaseModel)
 TResponseSchema = TypeVar("TResponseSchema", bound=BaseModel)
@@ -32,6 +34,24 @@ def routes(
                 item = await create_func(item.dict())
                 if not item:
                     raise CustomValidationException(status_code=400, detail="Item not created.", pre = True)
+                if model_name == 'PROJECT':
+                    project = await Projects.get_or_none(name=item.name)
+                    user = await Users.get_or_none(username="admin")
+                    project_assignment_data = UserProjectCreate(
+                        project_id= project.id,  
+                        user_id=[user.id]
+                    )
+                    await assign_project_to_users(project_assignment_data)
+
+                elif model_name == 'PERMISSION':
+                     permission = await Permissions.get_or_none(name=item.name)
+                     role = await Roles.get_or_none(name="admin")
+                     permission_assignment_data = RolePermissionCreate(
+                            permission_id=[permission.id],
+                            role_id=role.id
+                        )
+                     await assign_permissions(permission_assignment_data)
+
                 return item
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))

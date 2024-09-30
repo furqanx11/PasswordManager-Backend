@@ -5,12 +5,14 @@ from app.routers.routes import routes
 from app.models import RolePermissions, RolePermission_Pydantic, Permissions, Roles
 from fastapi import APIRouter, HTTPException, status
 from tortoise.exceptions import DoesNotExist
+from typing import List
 
 role_permission = CRUD(RolePermissions, RolePermission_Pydantic, related_fields=['role', 'permission'])
 
 router_new = APIRouter()
 
-@router_new.post("/assign", response_model = RolePermission_Pydantic , status_code=status.HTTP_201_CREATED)
+
+@router_new.post("/assign", response_model=List[RolePermissionRead], status_code=status.HTTP_201_CREATED)
 async def assign_permissions(role_permission: RolePermissionCreate):
     try:
         # Check if the role exists
@@ -43,10 +45,15 @@ async def assign_permissions(role_permission: RolePermissionCreate):
             )
 
         # Assign only the new permissions
+        created_permissions = []
         for permission_id in new_permissions:
-            await RolePermissions.create(role_id=role_permission.role_id, permission_id=permission_id)
-        
-        return {"message": "Permissions assigned successfully"}
+            created_permission = await RolePermissions.create(role_id=role_permission.role_id, permission_id=permission_id)
+            created_permissions.append(created_permission)
+
+        # Convert the created RolePermissions instances to RolePermissionRead models
+        created_permissions_read = [RolePermissionRead.from_orm(perm) for perm in created_permissions]
+
+        return created_permissions_read
     except DoesNotExist:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     except IntegrityError:

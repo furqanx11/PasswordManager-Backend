@@ -1,3 +1,4 @@
+from sqlite3 import IntegrityError
 from app.crud.crud import CRUD
 from app.schemas.role_permission_schema import RolePermissionCreate, RolePermissionRead, RolePermissionUpdate
 from app.routers.routes import routes
@@ -9,7 +10,7 @@ role_permission = CRUD(RolePermissions, RolePermission_Pydantic, related_fields=
 
 router_new = APIRouter()
 
-@router_new.post("/assign", status_code=status.HTTP_201_CREATED)
+@router_new.post("/assign", response_model = RolePermission_Pydantic , status_code=status.HTTP_201_CREATED)
 async def assign_permissions(role_permission: RolePermissionCreate):
     try:
         # Check if the role exists
@@ -26,15 +27,33 @@ async def assign_permissions(role_permission: RolePermissionCreate):
         if len(permissions) != len(permission_ids):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more permissions not found")
 
-        # Assign permissions to the role
-        for permission_id in permission_ids:
+        # Check if the role already has the specified permissions
+        existing_permissions = await RolePermissions.filter(
+            role_id=role_permission.role_id,
+            permission_id__in=permission_ids
+        ).values_list('permission_id', flat=True)
+
+        # Filter out already assigned permissions
+        new_permissions = [perm_id for perm_id in permission_ids if perm_id not in existing_permissions]
+
+        if not new_permissions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="All specified permissions are already assigned to the role"
+            )
+
+        # Assign only the new permissions
+        for permission_id in new_permissions:
             await RolePermissions.create(role_id=role_permission.role_id, permission_id=permission_id)
         
         return {"message": "Permissions assigned successfully"}
     except DoesNotExist:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Duplicate permission assignment detected")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 router = routes(
     create_func=role_permission.create,

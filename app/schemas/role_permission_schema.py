@@ -1,6 +1,7 @@
 from app.schemas.schema import BaseSchema
 from typing import Optional, Union, List
 from pydantic import BaseModel, Field
+from app.models import Permissions
 
 class RolePermissionCreate(BaseModel):
     role_id: int

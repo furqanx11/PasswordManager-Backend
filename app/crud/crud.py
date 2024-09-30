@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional, TypeVar
 from tortoise.models import Model
 from app.exceptions.custom_exceptions import CustomValidationException
-#from app.models import User, User_Pydantic, Project, Project_Pydantic, UserProject, Password_Pydantic, Password
 
 
 TModel = TypeVar("TModel", bound=Model)

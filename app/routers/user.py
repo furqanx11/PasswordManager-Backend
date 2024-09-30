@@ -80,9 +80,55 @@ async def get_all_users():
     users = Users.all()
     return await User_Pydantic.from_queryset(users)
 
-@router.get("/user/{user_id}/projects", response_model=List[ProjectWithFields])
-async def get_user_projects(user_id: int):
+# @router.get("/me/projects", response_model=List[ProjectWithFields])
+# async def get_user_projects(current_user: Users = Depends(get_current_user)):
+#     try:
+#         user_id = current_user['id']
+#         user = await Users.get_or_none(id=user_id)
+#         if not user:
+#             raise HTTPException(status_code=404, detail="User not found.")
+
+#         user_projects = await UserProjects.filter(user_id=user_id).prefetch_related('project')
+#         projects = [user_project.project for user_project in user_projects]
+#         project_ids = [project.id for project in projects]
+
+#         # Fetch fields as dictionaries
+#         fields = await Fields.filter(project_id__in=project_ids).values()
+
+#         fields_by_project = {}
+#         for field in fields:
+#             if field['project_id'] not in fields_by_project:
+#                 fields_by_project[field['project_id']] = []
+#             fields_by_project[field['project_id']].append(field)
+
+#         project_data = []
+#         for project in projects:
+#             project_dict = await Project_Pydantic.from_tortoise_orm(project)
+#             project_dict = project_dict.dict()
+
+#             modes = await has_permission(None, "FIELD:GET:MODE", user_id)
+#             if modes == True:
+#                 keys = await get_fields_by_mode(None, project.name)
+#                 project_dict['fields'] = keys
+#             elif "ALL" in modes:
+#                 keys = await get_fields_by_mode(None, project.name)
+#                 project_dict['fields'] = keys
+#             elif modes:
+#                 project_dict['fields'] = await get_fields_by_mode(modes, project.name)
+    
+            
+#             project_data.append(project_dict)
+
+#         return project_data
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
+
+@router.get("/me/projects", response_model=List[ProjectWithFields])
+async def get_user_projects(current_user: Users = Depends(get_current_user)):
     try:
+        user_id = current_user['id']
         user = await Users.get_or_none(id=user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found.")
@@ -93,6 +139,11 @@ async def get_user_projects(user_id: int):
 
         # Fetch fields as dictionaries
         fields = await Fields.filter(project_id__in=project_ids).values()
+
+        if not fields:
+            # If no fields are found, return only projects
+            project_data = [await Project_Pydantic.from_tortoise_orm(project) for project in projects]
+            return project_data
 
         fields_by_project = {}
         for field in fields:
@@ -105,17 +156,24 @@ async def get_user_projects(user_id: int):
             project_dict = await Project_Pydantic.from_tortoise_orm(project)
             project_dict = project_dict.dict()
 
-            modes = await has_permission(None, "FIELD:GET:MODE", user_id)
-            if modes == True:
-                keys = await get_fields_by_mode(None, project.name)
-                project_dict['fields'] = keys
-            elif "ALL" in modes:
-                keys = await get_fields_by_mode(None, project.name)
-                project_dict['fields'] = keys
-            elif modes:
-                project_dict['fields'] = await get_fields_by_mode(modes, project.name)
-    
-            
+            try:
+                modes = await has_permission(None, "FIELD:GET:MODE", user_id)
+                if modes == True:
+                    keys = await get_fields_by_mode(None, project.name)
+                    project_dict['fields'] = keys
+                elif "ALL" in modes:
+                    keys = await get_fields_by_mode(None, project.name)
+                    project_dict['fields'] = keys
+                elif modes:
+                    project_dict['fields'] = await get_fields_by_mode(modes, project.name)
+            except HTTPException as e:
+                if e.detail == "You do not have the necessary permissions":
+                    # If permission error, return only projects
+                    project_data = [await Project_Pydantic.from_tortoise_orm(project) for project in projects]
+                    return project_data
+                else:
+                    raise e
+
             project_data.append(project_dict)
 
         return project_data
@@ -123,7 +181,7 @@ async def get_user_projects(user_id: int):
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
-    
+
 @router.get("/user/{user_id}", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:GET"))])
 async def get_user_by_id(user_id: int):
     try:
@@ -190,6 +248,16 @@ async def refresh_token(response: Response, current_user: Users = Depends(get_cu
 async def get_user_roles(current_user: Users = Depends(get_current_user)):
     try:
         user_id = int(current_user['id'])
+        user_roles = await UserRoles.filter(user_id=user_id).values()
+        role_ids = [user_role['role_id'] for user_role in user_roles]
+        roles = await Role_Pydantic.from_queryset(Roles.filter(id__in=role_ids))
+        return roles
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error{str(e)}")
+    
+@router.get("/user/{user_id}/roles", response_model=List[Role_Pydantic])
+async def get_user_roles(user_id: int):
+    try:
         user_roles = await UserRoles.filter(user_id=user_id).values()
         role_ids = [user_role['role_id'] for user_role in user_roles]
         roles = await Role_Pydantic.from_queryset(Roles.filter(id__in=role_ids))

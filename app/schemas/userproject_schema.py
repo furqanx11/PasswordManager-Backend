@@ -1,10 +1,10 @@
-from typing import Optional
+from typing import Optional, Union, List
 from pydantic import BaseModel
 from app.schemas.schema import BaseSchema
 
 
 class UserProjectCreate(BaseModel):
-    user_id: int
+    user_id: Union[int, List[int]]
     project_id: int
 
 class UserProjectUpdate(BaseModel):

@@ -27,8 +27,11 @@ class UserRoles(BaseModel):
     user = fields.ForeignKeyField('models.Users', related_name='roles')
     role = fields.ForeignKeyField('models.Roles', related_name='users')
 
+    class Meta:
+        unique_together = ('user_id', 'role_id')
+
 class Permissions(BaseModel):
-    name = fields.CharField(max_length=20)
+    name = fields.CharField(max_length=30)
 
 class Projects(BaseModel):
     name = fields.CharField(max_length=100)
@@ -37,6 +40,9 @@ class Projects(BaseModel):
 class UserProjects(BaseModel):
     user = fields.ForeignKeyField('models.Users', related_name='projects')
     project = fields.ForeignKeyField('models.Projects', related_name='users')
+
+    class Meta:
+        unique_together = ('user_id', 'project_id')
 
 class Fields(BaseModel):
     project = fields.ForeignKeyField('models.Projects', related_name='fields')
@@ -51,6 +57,9 @@ class Modes(BaseModel):
 class RolePermissions(BaseModel):
     role = fields.ForeignKeyField('models.Roles', related_name='role_permissions', to_field = 'id')
     permission = fields.ForeignKeyField('models.Permissions', related_name='role_permissions', to_field = 'id')
+
+    class Meta:
+        unique_together = ('role_id', 'permission_id')
 
 Mode_Pydantic = pydantic_model_creator(Modes, name="Mode")
 ModeIn_Pydantic = pydantic_model_creator(Modes, name="ModeIn", exclude_readonly=True)

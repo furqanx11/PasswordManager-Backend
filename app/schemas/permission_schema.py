@@ -1,5 +1,5 @@
 from app.schemas.schema import BaseSchema
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 
 class PermissionCreate(BaseModel):
@@ -13,3 +13,11 @@ class PermissionRead(BaseSchema):
 
     class Config:
         orm_mode = True
+        from_attributes = True
+
+class RolePermissionResponse(BaseModel):
+    role_id: int
+    permissions: List[PermissionRead]
+
+    class config:
+        from_attributes = True

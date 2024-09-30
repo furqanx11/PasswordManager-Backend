@@ -63,7 +63,9 @@ async def has_permission(current_user: Dict[str, Any] , required_perm: str, user
         # Check if the user has the required permission
         for role_permission in role_permissions:
             if required_perm == 'FIELD:GET:MODE':
+                print("HEREEE")
                 if role_permission.permission.name.startswith('FIELD:GET:'):
+                    print(role_permission.permission.name)
                     field_perms.append(role_permission.permission.name)
             elif role_permission.permission.name == required_perm:
                 return True

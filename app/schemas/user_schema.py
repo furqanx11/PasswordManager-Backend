@@ -2,19 +2,14 @@ from typing import Optional, List
 from pydantic import EmailStr, BaseModel, validator
 from app.schemas.schema import BaseSchema
 import re
+from app.exceptions.custom_exceptions import CustomValidationException
 
 
 class UserCreate(BaseModel):
     name : str
     username: str
     password: str
-    @validator('email')
-    def validate_email(cls, v):
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(pattern, v):
-            raise ValueError('Invalid email address')
-        return v
-
+    email :EmailStr
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -28,4 +23,4 @@ class UserRead(BaseSchema):
     email: EmailStr
 
     class Config:
-        orm_mode = True
+        from_attributes = True

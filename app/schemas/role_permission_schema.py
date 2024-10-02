@@ -8,11 +8,10 @@ class RolePermissionCreate(BaseModel):
     permission_id: Union[int, List[int]]
 class RolePermissionUpdate(BaseModel):
     role_id : Optional[int] = None
-    permission_id : Optional[int] = None
+    permission_id : Optional[List[int]] = None
 
 class RolePermissionRead(BaseSchema):
     role_id: int
     permission_id: int
     class Config:
-        orm_mode = True
         from_attributes = True

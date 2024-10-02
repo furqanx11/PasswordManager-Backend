@@ -8,11 +8,11 @@ class UserProjectCreate(BaseModel):
     project_id: int
 
 class UserProjectUpdate(BaseModel):
-    user_id: Optional[int] = None
+    user_id: Optional[List[int]] = None
     project_id: Optional[int] = None
 
 class UserProjectRead(BaseSchema):
     user_id: int
     project_id: int
     class Config:
-        orm_mode = True
+        from_attributes = True

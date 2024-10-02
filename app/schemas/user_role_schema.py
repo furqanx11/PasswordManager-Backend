@@ -9,10 +9,10 @@ class UserRoleCreate(BaseModel):
 
 class UserRoleUpdate(BaseModel):
     user_id: Optional[int] = None
-    role_id: Optional[int] = None
+    role_id: Optional[List[int]] = None
 
 class UserRoleRead(BaseSchema):
     user_id: int
     role_id: int
     class Config:
-        orm_mode = True
+        from_attributes = True

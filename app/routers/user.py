@@ -8,21 +8,23 @@ from datetime import timedelta
 from app.dependencies.auth import get_current_user
 from app.crud.crud import CRUD
 from typing import List
-from app.models import UserProjects, Project_Pydantic,Field_Pydantic, Fields
+from app.models import UserProjects, Project_Pydantic, Fields
 from app.middleware.permissions import permission_dependency, has_permission
 from tortoise.transactions import in_transaction
 from app.routers.fields import get_fields_by_mode
 import logging
+from app.utils.validate_email import validate_email
 
 router = APIRouter()
 user_crud = CRUD(Users, User_Pydantic)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@router.post("/register", response_model=UserRead)
+@router.post("/register", response_model=UserRead, dependencies=[Depends(permission_dependency("USER:CREATE"))])
 async def register_user(user: UserCreate):
+    if not validate_email(user.email):
+        raise HTTPException(status_code=400, detail="Invalid email address")
     try:
         user_obj = await Users.create(
             name = user.name,
@@ -41,7 +43,6 @@ async def login_for_access_token(response: Response, form_data: OAuth2PasswordRe
         if not user or not verify_password(form_data.password, user.password):
             raise HTTPException(status_code=401, detail="Incorrect username or password")
         
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = await create_access_token(user)  
         
         response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
@@ -52,78 +53,30 @@ async def login_for_access_token(response: Response, form_data: OAuth2PasswordRe
 @router.patch("/me", response_model=UserUpdate)
 async def update_user_me(user_update: UserUpdate, current_user: Users = Depends(get_current_user)):
         async with in_transaction():
-            # Fetch the current user from the database
             current_user = await Users.get(id=current_user['id'])
-            # Update only the fields that are provided in the request
             if user_update.name is not None:
                 current_user.name = user_update.name
             if user_update.username is not None:
                 current_user.username = user_update.username
             if user_update.email is not None:
+                if not validate_email(user_update.email):
+                    raise HTTPException(status_code=400, detail="Invalid email address")
                 current_user.email = user_update.email
             if user_update.password is not None:
                 current_user.password = get_password_hash(user_update.password)
 
-            # Save the updated user
             await current_user.save()
 
             return await User_Pydantic.from_tortoise_orm(current_user)
 
 @router.get("/me", response_model=UserRead)
 async def read_users_me(current_user: Users = Depends(get_current_user)):
-    print(current_user)
-    print(current_user['username'])
     return await user_crud.get_by_username(username=current_user["username"])
 
-@router.get("/users", response_model=list[UserRead], dependencies=[Depends(permission_dependency("USER:LIST"))])
+@router.get("/users", response_model=list[UserRead], dependencies=[Depends(permission_dependency("USER:GET_ALL"))])
 async def get_all_users():
     users = Users.all()
     return await User_Pydantic.from_queryset(users)
-
-# @router.get("/me/projects", response_model=List[ProjectWithFields])
-# async def get_user_projects(current_user: Users = Depends(get_current_user)):
-#     try:
-#         user_id = current_user['id']
-#         user = await Users.get_or_none(id=user_id)
-#         if not user:
-#             raise HTTPException(status_code=404, detail="User not found.")
-
-#         user_projects = await UserProjects.filter(user_id=user_id).prefetch_related('project')
-#         projects = [user_project.project for user_project in user_projects]
-#         project_ids = [project.id for project in projects]
-
-#         # Fetch fields as dictionaries
-#         fields = await Fields.filter(project_id__in=project_ids).values()
-
-#         fields_by_project = {}
-#         for field in fields:
-#             if field['project_id'] not in fields_by_project:
-#                 fields_by_project[field['project_id']] = []
-#             fields_by_project[field['project_id']].append(field)
-
-#         project_data = []
-#         for project in projects:
-#             project_dict = await Project_Pydantic.from_tortoise_orm(project)
-#             project_dict = project_dict.dict()
-
-#             modes = await has_permission(None, "FIELD:GET:MODE", user_id)
-#             if modes == True:
-#                 keys = await get_fields_by_mode(None, project.name)
-#                 project_dict['fields'] = keys
-#             elif "ALL" in modes:
-#                 keys = await get_fields_by_mode(None, project.name)
-#                 project_dict['fields'] = keys
-#             elif modes:
-#                 project_dict['fields'] = await get_fields_by_mode(modes, project.name)
-    
-            
-#             project_data.append(project_dict)
-
-#         return project_data
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
 
 @router.get("/me/projects", response_model=List[ProjectWithFields])
 async def get_user_projects(current_user: Users = Depends(get_current_user)):
@@ -137,11 +90,9 @@ async def get_user_projects(current_user: Users = Depends(get_current_user)):
         projects = [user_project.project for user_project in user_projects]
         project_ids = [project.id for project in projects]
 
-        # Fetch fields as dictionaries
         fields = await Fields.filter(project_id__in=project_ids).values()
 
         if not fields:
-            # If no fields are found, return only projects
             project_data = [await Project_Pydantic.from_tortoise_orm(project) for project in projects]
             return project_data
 
@@ -206,6 +157,11 @@ async def update_user_by_id(user_id: int, user_update: UserUpdate):
         if 'password' in user_data:
             user_data['password'] = get_password_hash(user_data['password'])
         
+        if 'email' in user_data:
+            if not validate_email(user_data['email']):
+                raise HTTPException(status_code=400, detail="Invalid email address")
+            user_data['email'] = user_data['email']
+        
         for key, value in user_data.items():
             setattr(user, key, value)
         await user.save()
@@ -255,7 +211,7 @@ async def get_user_roles(current_user: Users = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error{str(e)}")
     
-@router.get("/user/{user_id}/roles", response_model=List[Role_Pydantic])
+@router.get("/user/{user_id}/roles", response_model=List[Role_Pydantic], dependencies=[Depends(permission_dependency("USER:ROLES"))])
 async def get_user_roles(user_id: int):
     try:
         user_roles = await UserRoles.filter(user_id=user_id).values()

@@ -56,35 +56,7 @@ def routes(
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))
 
-    # @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GETALL"))])
-    # async def get_fields_by_mode(mode_name: Optional[str] = None, project_name: Optional[str] = None):
-    #     if model_name == "Field":
-    #         permission_exists_all = await permission_dependency("field:getall")  # Check if permission exists
-    #     if permission_exists_all:
-    #         items = await get_all()
-    #         return items
-    #     else:
-    #         if mode_name:
-    #             _, mode_value = mode_name.split(":", 1)
-    #             # Fetch the mode from the database
-    #             mode = await Modes.get_or_none(name=mode_value)
-    #             if not mode:
-    #                 raise HTTPException(status_code=404, detail="Mode not found")
-    #             filters = {'mode_id': mode.id}
-    #             if project_name:
-    #                 project = await Projects.get_or_none(name=project_name)
-    #                 if project:
-    #                     filters['project_id'] = project.id
-    #             fields_queryset = await Fields.filter(**filters).values('id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at')
-    #             if not fields_queryset:
-    #                 raise HTTPException(status_code=404, detail="No fields found.")
-    #             return fields_queryset
-    #         if not mode_name and not project_name:
-    #             items = await get_all()
-    #         return items
-    #     raise HTTPException(status_code=400, detail="Invalid request parameters.")
-        
-    @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GETALL"))])
+    @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GET_ALL"))])
     async def read_all():
             items = await get_all()
             return items

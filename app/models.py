@@ -16,9 +16,6 @@ class Users(BaseModel):
     email = fields.CharField(max_length=255, unique=True)
     is_active = fields.BooleanField(default=True)
 
-    # class PydanticMeta:
-    #     exclude = ['password'] 
-
 class Roles(BaseModel):
     name = fields.CharField(max_length=20)
     permissions = fields.ManyToManyField('models.Permissions', through='rolepermissions', related_name='roles')

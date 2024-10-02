@@ -5,21 +5,20 @@ from app.models import Roles, Role_Pydantic
 from app.models import RolePermissions
 from app.schemas.permission_schema import RolePermissionResponse
 from app.schemas.permission_schema import PermissionRead
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from tortoise.exceptions import DoesNotExist
+from app.middleware.permissions import permission_dependency
 
 
 role = CRUD(Roles, Role_Pydantic)
 
 router_new = APIRouter()
 
-@router_new.get("/{role_id}/permissions", response_model=RolePermissionResponse)
+@router_new.get("/{role_id}/permissions", response_model=RolePermissionResponse, dependencies=[Depends(permission_dependency("ROLE:PERMISSIONS"))])
 async def get_permissions_for_role(role_id: int):
     try:
-        # Check if the role exists
         role = await Roles.get(id=role_id)
         
-        # Fetch permissions for the role
         role_permissions = await RolePermissions.filter(role_id=role_id).prefetch_related('permission')
         permissions = [PermissionRead.from_orm(rp.permission) for rp in role_permissions]
         

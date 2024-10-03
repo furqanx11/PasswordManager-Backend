@@ -1,7 +1,7 @@
 from typing import Optional, List
 from pydantic import EmailStr, BaseModel, validator
 from app.schemas.schema import BaseSchema
-import re
+from datetime import datetime
 from app.exceptions.custom_exceptions import CustomValidationException
 
 
@@ -22,5 +22,22 @@ class UserRead(BaseSchema):
     username: str
     email: EmailStr
 
+    class Config:
+        from_attributes = True
+
+class UserDetail(BaseModel):
+    id: int
+    name: str
+    username: str
+    email: EmailStr
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProjectUsers(BaseModel):
+    users: List[UserRead]
+    project_id: int
     class Config:
         from_attributes = True

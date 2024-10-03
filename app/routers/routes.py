@@ -8,6 +8,7 @@ from app.models import Projects, Users, Roles, Permissions
 from app.schemas.role_permission_schema import RolePermissionCreate
 from app.schemas.userproject_schema import UserProjectCreate
 from app.utils.assignment_functions import assign_permissions, assign_project_to_users
+from app.dependencies.auth import get_current_user
 
 TCreateSchema = TypeVar("TCreateSchema", bound=BaseModel)
 TResponseSchema = TypeVar("TResponseSchema", bound=BaseModel)
@@ -36,11 +37,18 @@ def routes(
                     raise CustomValidationException(status_code=400, detail="Item not created.", pre = True)
                 if model_name == 'PROJECT':
                     project = await Projects.get_or_none(name=item.name)
-                    user = await Users.get_or_none(username="admin")
-                    project_assignment_data = UserProjectCreate(
-                        project_id= project.id,  
-                        user_id=[user.id]
-                    )
+                    admin = await Users.get_or_none(username="admin")
+                    user = await get_current_user()
+                    if admin.id != user['id']:
+                        project_assignment_data = UserProjectCreate(
+                            project_id= project.id,  
+                            user_id=[user['id'], admin.id]
+                        )
+                    else:
+                        project_assignment_data = UserProjectCreate(
+                            project_id= project.id,  
+                            user_id=[user['id']]
+                        )
                     await assign_project_to_users(project_assignment_data)
 
                 elif model_name == 'PERMISSION':
@@ -56,7 +64,7 @@ def routes(
             except ValidationError as e:
                 raise CustomValidationException(status_code=400, detail=str(e))
 
-    @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GET_ALL"))])
+    @router.get("/", response_model=List[response_schema], dependencies=[Depends(permission_dependency(f"{model_name}:GET:ALL"))])
     async def read_all():
             items = await get_all()
             return items

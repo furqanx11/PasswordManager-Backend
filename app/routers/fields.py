@@ -108,9 +108,6 @@ async def get_fields_by_mode(
         'id', 'key', 'value', 'description', 'project_id', 'mode_id', 'created_at', 'updated_at'
     )
     
-    if not fields_queryset:
-        raise HTTPException(status_code=404, detail="No fields found.")
-    
     private_key = load_private_key()
     for field in fields_queryset:
         decrypted_value = decrypt_with_rsa(private_key, field['value'])

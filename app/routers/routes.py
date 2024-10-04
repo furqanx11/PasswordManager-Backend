@@ -30,7 +30,7 @@ def routes(
 
 
     @router.post("/", response_model=pydantic_model, status_code=status.HTTP_201_CREATED, dependencies=[Depends(permission_dependency(f"{model_name}:CREATE"))])
-    async def create(item: create_schema):
+    async def create(item: create_schema, current_user: Users = Depends(get_current_user)):
             try:
                 item = await create_func(item.dict())
                 if not item:
@@ -38,16 +38,15 @@ def routes(
                 if model_name == 'PROJECT':
                     project = await Projects.get_or_none(name=item.name)
                     admin = await Users.get_or_none(username="admin")
-                    user = await get_current_user()
-                    if admin.id != user['id']:
+                    if admin.id != current_user['id']:
                         project_assignment_data = UserProjectCreate(
                             project_id= project.id,  
-                            user_id=[user['id'], admin.id]
+                            user_id=[current_user['id'], admin.id]
                         )
                     else:
                         project_assignment_data = UserProjectCreate(
                             project_id= project.id,  
-                            user_id=[user['id']]
+                            user_id=[current_user['id']]
                         )
                     await assign_project_to_users(project_assignment_data)
 

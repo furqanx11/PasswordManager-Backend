@@ -1,6 +1,7 @@
 from typing import Optional, Union, List
 from pydantic import BaseModel
 from app.schemas.schema import BaseSchema
+from app.schemas.user_schema import UserRead
 
 
 class UserProjectCreate(BaseModel):

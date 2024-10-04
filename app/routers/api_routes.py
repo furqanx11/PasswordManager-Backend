@@ -8,6 +8,7 @@ router = APIRouter()
 
 router.include_router(user.router)
 router.include_router(projects.router, prefix="/project", tags=["projects"])
+router.include_router(projects.router_new, prefix="/project", tags=["projects"])
 router.include_router(assign_project.router, prefix="/assign_project", tags=["assign_projects"])
 router.include_router(assign_project.router_new, prefix="/assign_project", tags=["assign_projects"])
 router.include_router(roles.router, prefix="/role", tags=["roles"])

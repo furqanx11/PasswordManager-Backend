@@ -73,7 +73,7 @@ async def update_user_me(user_update: UserUpdate, current_user: Users = Depends(
 async def read_users_me(current_user: Users = Depends(get_current_user)):
     return await user_crud.get_by_username(username=current_user["username"])
 
-@router.get("/users", response_model=list[UserRead], dependencies=[Depends(permission_dependency("USER:GET_ALL"))])
+@router.get("/users", response_model=list[UserRead], dependencies=[Depends(permission_dependency("USER:GET:ALL"))])
 async def get_all_users():
     users = Users.all()
     return await User_Pydantic.from_queryset(users)

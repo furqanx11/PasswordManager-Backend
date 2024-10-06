@@ -17,7 +17,7 @@ PasswordManager-Backend is a secure and efficient backend service to manage cred
 - For decryption, the system uses the **private RSA key** along with **SHA-256 padding** to securely retrieve the original sensitive information for authorized users.
 
 ## Entity-Relationship Diagram
-![ERD]("C:\Hurera New Laptop\PasswordManager-Backend\images\erd_image.png")
+![ERD](images/erd_image.png)
 
 ## Installation
 

@@ -76,5 +76,5 @@ public_key = load_public_key()
 private_key = load_private_key()
 
 # Encrypt and decrypt
-ciphertext = encrypt_with_rsa(public_key, "Hurera Mujeeb")
+ciphertext = encrypt_with_rsa(public_key, "APP_KEY")
 plaintext = decrypt_with_rsa(private_key, ciphertext)

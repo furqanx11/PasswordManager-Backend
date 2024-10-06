@@ -6,4 +6,3 @@ docker-compose.yml
 .gitignore
 private_key.pem
 public_key.pem
-images/erd_image.png
